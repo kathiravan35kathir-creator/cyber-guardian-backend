@@ -1,0 +1,25 @@
+# Virtual environments
+venv/
+.env
+.venv/
+
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+
+# SQLite DB
+cyber_guardian.db
+*.sqlite3
+
+# VS Code
+.vscode/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# OS files
+.DS_Store
+Thumbs.db
