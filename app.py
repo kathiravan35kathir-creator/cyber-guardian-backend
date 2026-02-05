@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import os  # <-- Add this to read env variables
 
 app = Flask(__name__)
 CORS(app)
@@ -8,6 +9,11 @@ CORS(app)
 guardians = {
     "9876543210": ["9999911111", "8888822222"]
 }
+
+# 🌟 Example of reading an environment variable
+# You can set this in Windows or Render
+API_KEY = os.getenv("MY_API_KEY", "DUMMY_KEY")  # fallback if not set
+print("Your API Key:", API_KEY)
 
 @app.route("/")
 def home():
@@ -43,6 +49,7 @@ def sos():
     print("User:", user)
     print("Reason:", reason)
     print("Alerting Guardians:", guardian_list)
+    print("Using API_KEY:", API_KEY)  # Example usage of environment variable
 
     return jsonify({
         "success": True,
