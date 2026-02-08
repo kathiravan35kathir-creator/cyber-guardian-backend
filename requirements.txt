@@ -1,0 +1,9 @@
+flask
+flask-cors
+python-dotenv
+supabase
+requests
+beautifulsoup4
+tldextract
+gunicorn==20.1.0
+

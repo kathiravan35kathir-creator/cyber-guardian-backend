@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: cyber-guardian-backend
+    env: python
+    buildCommand: python3 -m pip install -r requirements.txt
+    startCommand: python3 -m gunicorn app:app
