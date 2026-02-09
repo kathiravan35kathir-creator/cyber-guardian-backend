@@ -321,19 +321,50 @@ def analyze_message_get():
     })
 
 
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "status": "success",
+        "message": "Cyber Guardian Backend is Running 🚀"
+    })
 
 @app.route("/analyze/message", methods=["POST"])
 def analyze_message():
-    data = request.json
-    message = data.get("message", "").strip()
+    data = request.get_json()
+    message = data.get("message", "")
 
     if not message:
-        return jsonify({"status": "Error", "message": "Message is empty"}), 400
+        return jsonify({"error": "Message is empty"}), 400
 
-    result = analyze_text_common(message, "message")
-    save_threat("message", message, result["status"], result["risk_score"], result["reasons"])
+    # dummy response now (later ML add pannalam)
+    return jsonify({
+        "type": "message",
+        "input": message,
+        "status": "Safe",
+        "risk_score": 10,
+        "reasons": ["Test response working"]
+    })
 
-    return jsonify(result)
+@app.route("/dashboard/stats", methods=["GET"])
+def dashboard_stats():
+    return jsonify({
+        "total": 10,
+        "safe": 7,
+        "caution": 2,
+        "danger": 1
+    })
+
+@app.route("/dashboard/recent", methods=["GET"])
+def dashboard_recent():
+    return jsonify({
+        "recent_threats": [
+            {"id": 1, "type": "message", "status": "Safe"},
+            {"id": 2, "type": "link", "status": "Danger"}
+        ]
+    })
+
+if __name__ == "__main__":
+    app.run(debug=True)
 
 
 @app.route("/analyze/link", methods=["POST"])
