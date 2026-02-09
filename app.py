@@ -352,8 +352,7 @@ def dashboard_stats():
         "caution": 2,
         "danger": 1
     })
-
-@app.route("/dashboard/recent", methods=["GET"])
+    
 def dashboard_recent():
     return jsonify({
         "recent_threats": [
