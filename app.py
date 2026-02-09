@@ -416,7 +416,7 @@ def analyze_voice():
 # ------------------- DASHBOARD ROUTES -------------------
 @app.route("/dashboard/stats", methods=["GET"])
 def dashboard_stats():
-    stats = get_dashboard_stats()
+    stats = get_dashboard_stats_1()
     return jsonify(stats)
 
 
