@@ -9,6 +9,11 @@ from database import get_db_connection
 
 app = Flask(__name__)
 
+@app.route("/", methods=["GET"])
+def home():
+    return {"status": "Cyber Guardian Backend Running"}, 200
+
+
 # ------------------- DATABASE CONFIG -------------------
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
