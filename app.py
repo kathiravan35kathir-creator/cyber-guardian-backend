@@ -314,9 +314,12 @@ def analyze_text_common(text, analysis_type="message"):
 
 
 # ------------------- ROUTES -------------------
-@app.route("/")
-def home():
-    return "Cyber Guardian Backend Running with DB + Dashboard + Call + Voice!"
+@app.route("/analyze/message", methods=["GET"])
+def analyze_message_get():
+    return jsonify({
+        "msg": "Use POST method with JSON body {message: ...}"
+    })
+
 
 
 @app.route("/analyze/message", methods=["POST"])
