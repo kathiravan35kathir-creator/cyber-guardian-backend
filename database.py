@@ -1,31 +1,30 @@
-import sqlite3
+import psycopg2
+import os
 
-def get_db():
-    conn = sqlite3.connect("cyber_guardian.db")
-    conn.row_factory = sqlite3.Row
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+def get_db_connection():
+    conn = psycopg2.connect(DATABASE_URL)
     return conn
 
+
 def init_db():
-    conn = get_db()
-    cur = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS guardians (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_phone TEXT,
-        guardian_name TEXT,
-        guardian_phone TEXT
-    )
-    """)
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS sos_alerts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_phone TEXT,
-        reason TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS threats (
+        id SERIAL PRIMARY KEY,
+        type TEXT,
+        input_text TEXT,
+        status TEXT,
+        risk_score INT,
+        reasons TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
     conn.commit()
+    cursor.close()
     conn.close()
+

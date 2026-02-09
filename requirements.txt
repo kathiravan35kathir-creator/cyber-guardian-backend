@@ -6,4 +6,7 @@ requests
 beautifulsoup4
 tldextract
 gunicorn==20.1.0
+psycopg2-binary
+setuptools
+
 
