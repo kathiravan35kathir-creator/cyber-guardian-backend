@@ -345,7 +345,6 @@ def analyze_message():
         "reasons": ["Test response working"]
     })
 
-@app.route("/dashboard/stats", methods=["GET"])
 def dashboard_stats():
     return jsonify({
         "total": 10,
@@ -415,8 +414,9 @@ def analyze_voice():
 
 # ------------------- DASHBOARD ROUTES -------------------
 @app.route("/dashboard/stats", methods=["GET"])
-def dashboard_stats_1():
-    return "stats 1"
+def dashboard_stats_api():
+    stats = get_dashboard_stats()
+    return jsonify(stats)
 
 
 @app.route("/dashboard/recent", methods=["GET"])
