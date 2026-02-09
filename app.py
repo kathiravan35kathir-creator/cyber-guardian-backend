@@ -419,7 +419,7 @@ def dashboard_stats_api():
 
 
 @app.route("/dashboard/recent", methods=["GET"])
-def dashboard_recent():
+def dashboard_recent_api():
     threats = get_recent_threats(limit=10)
     return jsonify({"recent_threats": threats})
 
