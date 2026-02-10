@@ -1,56 +1,20 @@
 from flask import Flask, request, jsonify
 import re
 import requests
-import psycopg2
 import os
 from urllib.parse import urlparse
-from datetime import datetime
 from database import get_db_connection
 
 app = Flask(__name__)
 
-@app.route("/", methods=["GET"])
-def home():
-    return {"status": "Cyber Guardian Backend Running"}, 200
-
-
-# ------------------- DATABASE CONFIG -------------------
-DATABASE_URL = os.environ.get("DATABASE_URL")
-
 # ------------------- BASIC KEYWORDS -------------------
 SCAM_KEYWORDS = [
-    "account blocked",
-    "urgent",
-    "verify now",
-    "click here",
-    "limited time",
-    "otp",
-    "bank",
-    "upi",
-    "payment failed",
-    "claim reward",
-    "congratulations",
-    "lottery",
-    "police case",
-    "suspend",
-    "reset password",
-    "login now",
-    "update kyc",
-    "aadhaar",
-    "pan",
-    "refund",
-    "amazon offer",
-    "flipkart offer",
-    "your sim will be blocked",
-    "fraud",
-    "immediate action",
-    "pay now",
-    "income tax",
-    "parcel",
-    "customs",
-    "courier",
-    "winner",
-    "free recharge"
+    "account blocked", "urgent", "verify now", "click here", "limited time",
+    "otp", "bank", "upi", "payment failed", "claim reward", "congratulations",
+    "lottery", "police case", "suspend", "reset password", "login now",
+    "update kyc", "aadhaar", "pan", "refund", "amazon offer", "flipkart offer",
+    "your sim will be blocked", "fraud", "immediate action", "pay now",
+    "income tax", "parcel", "customs", "courier", "winner", "free recharge"
 ]
 
 SUSPICIOUS_TLDS = [".xyz", ".top", ".tk", ".club", ".live", ".click", ".buzz", ".work"]
@@ -86,7 +50,6 @@ def init_db():
     conn.commit()
     cursor.close()
     conn.close()
-
 
 
 def save_threat(threat_type, input_text, status, risk_score, reasons):
@@ -139,7 +102,6 @@ def get_recent_threats(limit=10):
     return threats
 
 
-
 def get_dashboard_stats():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -165,7 +127,6 @@ def get_dashboard_stats():
         "caution": caution,
         "danger": danger
     }
-
 
 
 # ------------------- HELPER FUNCTIONS -------------------
@@ -319,6 +280,14 @@ def analyze_text_common(text, analysis_type="message"):
 
 
 # ------------------- ROUTES -------------------
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "status": "success",
+        "message": "Cyber Guardian Backend Running 🚀"
+    })
+
+
 @app.route("/analyze/message", methods=["GET"])
 def analyze_message_get():
     return jsonify({
@@ -326,53 +295,23 @@ def analyze_message_get():
     })
 
 
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({
-        "status": "success",
-        "message": "Cyber Guardian Backend is Running 🚀"
-    })
-
 @app.route("/analyze/message", methods=["POST"])
 def analyze_message():
     data = request.get_json()
-    message = data.get("message", "")
+    message = data.get("message", "").strip()
 
     if not message:
         return jsonify({"error": "Message is empty"}), 400
 
-    # dummy response now (later ML add pannalam)
-    return jsonify({
-        "type": "message",
-        "input": message,
-        "status": "Safe",
-        "risk_score": 10,
-        "reasons": ["Test response working"]
-    })
+    result = analyze_text_common(message, "message")
+    save_threat("message", message, result["status"], result["risk_score"], result["reasons"])
 
-def dashboard_stats():
-    return jsonify({
-        "total": 10,
-        "safe": 7,
-        "caution": 2,
-        "danger": 1
-    })
-    
-def dashboard_recent():
-    return jsonify({
-        "recent_threats": [
-            {"id": 1, "type": "message", "status": "Safe"},
-            {"id": 2, "type": "link", "status": "Danger"}
-        ]
-    })
-
-if __name__ == "__main__":
-    app.run(debug=True)
+    return jsonify(result)
 
 
 @app.route("/analyze/link", methods=["POST"])
 def analyze_link_api():
-    data = request.json
+    data = request.get_json()
     url = data.get("link", "").strip()
 
     if not url.startswith("http"):
@@ -390,7 +329,7 @@ def analyze_link_api():
 
 @app.route("/analyze/call", methods=["POST"])
 def analyze_call():
-    data = request.json
+    data = request.get_json()
     call_info = data.get("call_info", "").strip()
 
     if not call_info:
@@ -404,14 +343,14 @@ def analyze_call():
 
 @app.route("/analyze/voice", methods=["POST"])
 def analyze_voice():
-    data = request.json
+    data = request.get_json()
     voice_text = data.get("voice_text", "").strip()
 
     if not voice_text:
         return jsonify({"status": "Error", "message": "Voice text is empty"}), 400
 
     result = analyze_text_common(voice_text, "voice")
-    save_threat("voice", voice_text, result["status"], result["risk_score"], result["reasons"])
+    save_threat("voice", voice_text, result["status"], result["risk_score"], result["risk_score"], result["reasons"])
 
     return jsonify(result)
 
