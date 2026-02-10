@@ -4,8 +4,10 @@ import os
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db_connection():
-    conn = psycopg2.connect(DATABASE_URL)
-    return conn
+    if not DATABASE_URL:
+        raise Exception("DATABASE_URL environment variable not set!")
+
+    return psycopg2.connect(DATABASE_URL, sslmode="require")
 
 
 def init_db():
@@ -27,4 +29,3 @@ def init_db():
     conn.commit()
     cursor.close()
     conn.close()
-
