@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 import re
+from urllib.parse import urlparse
 import requests
 import os
 from urllib.parse import urlparse
@@ -8,26 +9,70 @@ from database import get_db_connection
 app = Flask(__name__)
 
 # ------------------- BASIC KEYWORDS -------------------
-SCAM_KEYWORDS = [
-    "account blocked", "urgent", "verify now", "click here", "limited time",
-    "otp", "bank", "upi", "payment failed", "claim reward", "congratulations",
-    "lottery", "police case", "suspend", "reset password", "login now",
-    "update kyc", "aadhaar", "pan", "refund", "amazon offer", "flipkart offer",
-    "your sim will be blocked", "fraud", "immediate action", "pay now",
-    "income tax", "parcel", "customs", "courier", "winner", "free recharge"
-]
+def analyze_text_common(text, input_type="message"):
+    text_lower = text.lower()
 
-SUSPICIOUS_TLDS = [".xyz", ".top", ".tk", ".club", ".live", ".click", ".buzz", ".work"]
+    risk_score = 0
+    reasons = []
 
-SHORTENER_DOMAINS = [
-    "bit.ly", "tinyurl.com", "t.co", "goo.gl", "rebrand.ly", "cutt.ly",
-    "is.gd", "buff.ly", "ow.ly", "shorte.st"
-]
+    scam_keywords = [
+        "urgent", "immediately", "act now", "limited time",
+        "account blocked", "account suspended", "verify now",
+        "otp", "pin", "password", "bank", "credit card",
+        "processing fee", "pay now", "send money",
+        "won prize", "congratulations", "lottery", "reward",
+        "police case", "legal action", "court", "arrest",
+        "click here", "login now"
+    ]
 
-FAKE_BRAND_WORDS = [
-    "paytm", "phonepe", "gpay", "googlepay", "amazon", "flipkart",
-    "sbi", "hdfc", "icici", "axis", "upi", "netbanking"
-]
+    for word in scam_keywords:
+        if word in text_lower:
+            risk_score += 10
+            reasons.append(f"Suspicious keyword detected: {word}")
+
+    # Detect URL
+    url_pattern = r"(https?://\S+|www\.\S+)"
+    urls = re.findall(url_pattern, text_lower)
+
+    if urls:
+        risk_score += 20
+        reasons.append("Contains suspicious link")
+
+        for url in urls:
+            if "http://" in url:
+                risk_score += 10
+                reasons.append("Insecure HTTP link found")
+
+            # suspicious domains
+            suspicious_tlds = [".xyz", ".top", ".tk", ".ru", ".cn"]
+            for tld in suspicious_tlds:
+                if tld in url:
+                    risk_score += 15
+                    reasons.append(f"Suspicious domain extension: {tld}")
+
+    # Cap risk_score
+    if risk_score > 100:
+        risk_score = 100
+
+    # Decide status
+    if risk_score >= 70:
+        status = "Danger"
+    elif risk_score >= 40:
+        status = "Warning"
+    else:
+        status = "Safe"
+
+    if len(reasons) == 0:
+        reasons.append("No scam patterns detected")
+
+    return {
+        "type": input_type,
+        "input": text,
+        "status": status,
+        "risk_score": risk_score,
+        "reasons": reasons
+    }
+
 
 
 # ------------------- DB FUNCTIONS -------------------
@@ -52,24 +97,22 @@ def init_db():
     conn.close()
 
 
-def save_threat(threat_type, input_text, status, risk_score, reasons):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+def save_threat(type_, input_text, status, risk_score, reasons):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    cursor.execute("""
-    INSERT INTO threats (type, input_text, status, risk_score, reasons)
-    VALUES (%s, %s, %s, %s, %s)
-    """, (
-        threat_type,
-        input_text,
-        status,
-        risk_score,
-        ", ".join(reasons)
-    ))
+        cursor.execute("""
+            INSERT INTO threats (type, input_text, status, risk_score, reasons)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (type_, input_text, status, risk_score, str(reasons)))
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print("DB Save Error:", e)
+
 
 
 def get_recent_threats(limit=10):
