@@ -1,93 +1,34 @@
 from flask import Flask, request, jsonify
 import re
-from urllib.parse import urlparse
 import requests
 import os
 from urllib.parse import urlparse
 from database import get_db_connection
 
-
+app = Flask(__name__)
 
 # ------------------- BASIC KEYWORDS -------------------
-def analyze_text_common(text, input_type="message"):
-    text_lower = text.lower()
-
-    risk_score = 0
-    reasons = []
-
-  SCAM_KEYWORDS = [
+SCAM_KEYWORDS = [
     "urgent", "immediate action", "account blocked", "verify now",
     "bank", "otp", "password", "click here", "limited time",
     "prize", "winner", "lottery", "processing fee",
     "police case", "arrest", "legal action",
-    "loan approved", "refund", "gift card"
+    "loan approved", "refund", "gift card",
+    "suspended", "blocked", "update kyc", "aadhaar", "pan"
 ]
 
 SHORTENER_DOMAINS = [
-    "bit.ly",
-    "tinyurl.com",
-    "t.co",
-    "goo.gl",
-    "is.gd",
-    "cutt.ly",
-    "rb.gy"
+    "bit.ly", "tinyurl.com", "t.co", "goo.gl",
+    "is.gd", "cutt.ly", "rb.gy"
 ]
 
-try:
-    init_db()
-    print("✅ DB Initialized Successfully")
-except Exception as e:
-    print("❌ DB Init Failed:", e)
+SUSPICIOUS_TLDS = [".xyz", ".top", ".tk", ".ru", ".cn", ".club", ".live", ".click"]
 
-    for word in SCAM_KEYWORDS:
-        if word in text_lower:
-            risk_score += 10
-            reasons.append(f"Suspicious keyword detected: {word}")
-
-    # Detect URL
-    url_pattern = r"(https?://\S+|www\.\S+)"
-    urls = re.findall(url_pattern, text_lower)
-
-    if urls:
-        risk_score += 20
-        reasons.append("Contains suspicious link")
-
-        for url in urls:
-            if "http://" in url:
-                risk_score += 10
-                reasons.append("Insecure HTTP link found")
-
-            # suspicious domains
-            suspicious_tlds = [".xyz", ".top", ".tk", ".ru", ".cn"]
-            for tld in suspicious_tlds:
-                if tld in url:
-                    risk_score += 15
-                    reasons.append(f"Suspicious domain extension: {tld}")
-
-    # Cap risk_score
-    if risk_score > 100:
-        risk_score = 100
-
-    # Decide status
-    if risk_score >= 70:
-        status = "Danger"
-    elif risk_score >= 40:
-        status = "Warning"
-    else:
-        status = "Safe"
-
-    if len(reasons) == 0:
-        reasons.append("No scam patterns detected")
-
-    return {
-        "type": input_type,
-        "input": text,
-        "status": status,
-        "risk_score": risk_score,
-        "reasons": reasons
-    }
-
-
+FAKE_BRAND_WORDS = [
+    "paytm", "phonepe", "gpay", "googlepay",
+    "amazon", "flipkart", "sbi", "hdfc",
+    "icici", "axis", "upi", "netbanking"
+]
 
 # ------------------- DB FUNCTIONS -------------------
 def init_db():
@@ -119,14 +60,13 @@ def save_threat(type_, input_text, status, risk_score, reasons):
         cursor.execute("""
             INSERT INTO threats (type, input_text, status, risk_score, reasons)
             VALUES (%s, %s, %s, %s, %s)
-        """, (type_, input_text, status, risk_score, str(reasons)))
+        """, (type_, input_text, status, risk_score, ", ".join(reasons)))
 
         conn.commit()
         cursor.close()
         conn.close()
     except Exception as e:
         print("DB Save Error:", e)
-
 
 
 def get_recent_threats(limit=10):
@@ -188,7 +128,7 @@ def get_dashboard_stats():
 
 # ------------------- HELPER FUNCTIONS -------------------
 def extract_urls(text):
-    url_pattern = r"(https?://[^\s]+)"
+    url_pattern = r"(https?://[^\s]+|www\.[^\s]+)"
     return re.findall(url_pattern, text)
 
 
@@ -204,8 +144,10 @@ def get_domain(url):
     try:
         parsed = urlparse(url)
         domain = parsed.netloc.lower()
+
         if domain.startswith("www."):
             domain = domain.replace("www.", "")
+
         return domain
     except:
         return ""
@@ -236,17 +178,17 @@ def analyze_link(url):
         reasons.append("Insecure HTTP detected (not HTTPS)")
         risk_score += 15
 
-    # Brand spoofing words check
+    # Brand spoofing check
     for brand in FAKE_BRAND_WORDS:
         if brand in domain and not domain.endswith(".com") and not domain.endswith(".in"):
-            reasons.append(f"Possible fake brand spoofing detected: '{brand}' in domain")
+            reasons.append(f"Possible fake brand spoofing detected: {brand}")
             risk_score += 20
 
-    # Keywords in URL
+    # Keyword check inside URL
     lower_url = url.lower()
     for word in SCAM_KEYWORDS:
         if word in lower_url:
-            reasons.append(f"Suspicious keyword found in URL: '{word}'")
+            reasons.append(f"Suspicious keyword found in URL: {word}")
             risk_score += 10
 
     # Too many hyphens
@@ -286,29 +228,28 @@ def analyze_link(url):
 def analyze_text_common(text, analysis_type="message"):
     reasons = []
     risk_score = 0
-
     lower_text = text.lower()
 
     # Scam keywords detection
     for word in SCAM_KEYWORDS:
         if word in lower_text:
-            reasons.append(f"Scam keyword detected: '{word}'")
+            reasons.append(f"Scam keyword detected: {word}")
             risk_score += 10
 
-    # OTP pattern detection
+    # OTP detection
     otp_pattern = r"\b\d{4,6}\b"
     if re.search(otp_pattern, lower_text):
         reasons.append("OTP-like number detected")
         risk_score += 15
 
-    # Fear tactic detection
+    # Fear tactics
     fear_words = ["blocked", "suspended", "police", "case", "arrest", "court", "urgent", "immediately"]
     for fw in fear_words:
         if fw in lower_text:
-            reasons.append(f"Fear tactic word detected: '{fw}'")
+            reasons.append(f"Fear tactic word detected: {fw}")
             risk_score += 8
 
-    # URL extraction and analysis
+    # URL detection
     urls = extract_urls(text)
     for url in urls:
         link_result = analyze_link(url)
@@ -327,8 +268,12 @@ def analyze_text_common(text, analysis_type="message"):
     else:
         status = "Safe"
 
+    if len(reasons) == 0:
+        reasons.append("No scam patterns detected")
+
     return {
         "type": analysis_type,
+        "input": text,
         "status": status,
         "risk_score": risk_score,
         "reasons": reasons,
@@ -345,13 +290,6 @@ def home():
     })
 
 
-@app.route("/analyze/message", methods=["GET"])
-def analyze_message_get():
-    return jsonify({
-        "msg": "Use POST method with JSON body {message: ...}"
-    })
-
-
 @app.route("/analyze/message", methods=["POST"])
 def analyze_message():
     data = request.get_json()
@@ -361,12 +299,9 @@ def analyze_message():
         return jsonify({"error": "Message is empty"}), 400
 
     result = analyze_text_common(message, "message")
-
-    # Save to DB
     save_threat("message", message, result["status"], result["risk_score"], result["reasons"])
 
     return jsonify(result)
-
 
 
 @app.route("/analyze/link", methods=["POST"])
@@ -410,12 +345,11 @@ def analyze_voice():
         return jsonify({"status": "Error", "message": "Voice text is empty"}), 400
 
     result = analyze_text_common(voice_text, "voice")
-    save_threat("voice", voice_text, result["status"], result["risk_score"], result["risk_score"], result["reasons"])
+    save_threat("voice", voice_text, result["status"], result["risk_score"], result["reasons"])
 
     return jsonify(result)
 
 
-# ------------------- DASHBOARD ROUTES -------------------
 @app.route("/dashboard/stats", methods=["GET"])
 def dashboard_stats_api():
     stats = get_dashboard_stats()
@@ -437,4 +371,4 @@ def history_all():
 # ------------------- RUN -------------------
 if __name__ == "__main__":
     init_db()
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=10000)
