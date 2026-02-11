@@ -304,9 +304,12 @@ def analyze_message():
         return jsonify({"error": "Message is empty"}), 400
 
     result = analyze_text_common(message, "message")
+
+    # Save to DB
     save_threat("message", message, result["status"], result["risk_score"], result["reasons"])
 
     return jsonify(result)
+
 
 
 @app.route("/analyze/link", methods=["POST"])
