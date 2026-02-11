@@ -7,6 +7,19 @@ from urllib.parse import urlparse
 from database import get_db_connection
 
 app = Flask(__name__)
+SHORTENER_DOMAINS = [
+    "bit.ly",
+    "tinyurl.com",
+    "t.co",
+    "goo.gl",
+    "ow.ly",
+    "is.gd",
+    "buff.ly",
+    "rebrand.ly",
+    "cutt.ly",
+    "shorturl.at"
+]
+
 
 # ------------------- BASIC KEYWORDS -------------------
 def analyze_text_common(text, input_type="message"):
