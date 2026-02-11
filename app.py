@@ -6,19 +6,6 @@ import os
 from urllib.parse import urlparse
 from database import get_db_connection
 
-app = Flask(__name__)
-SHORTENER_DOMAINS = [
-    "bit.ly",
-    "tinyurl.com",
-    "t.co",
-    "goo.gl",
-    "ow.ly",
-    "is.gd",
-    "buff.ly",
-    "rebrand.ly",
-    "cutt.ly",
-    "shorturl.at"
-]
 
 
 # ------------------- BASIC KEYWORDS -------------------
@@ -28,17 +15,31 @@ def analyze_text_common(text, input_type="message"):
     risk_score = 0
     reasons = []
 
-    scam_keywords = [
-        "urgent", "immediately", "act now", "limited time",
-        "account blocked", "account suspended", "verify now",
-        "otp", "pin", "password", "bank", "credit card",
-        "processing fee", "pay now", "send money",
-        "won prize", "congratulations", "lottery", "reward",
-        "police case", "legal action", "court", "arrest",
-        "click here", "login now"
-    ]
+  SCAM_KEYWORDS = [
+    "urgent", "immediate action", "account blocked", "verify now",
+    "bank", "otp", "password", "click here", "limited time",
+    "prize", "winner", "lottery", "processing fee",
+    "police case", "arrest", "legal action",
+    "loan approved", "refund", "gift card"
+]
 
-    for word in scam_keywords:
+SHORTENER_DOMAINS = [
+    "bit.ly",
+    "tinyurl.com",
+    "t.co",
+    "goo.gl",
+    "is.gd",
+    "cutt.ly",
+    "rb.gy"
+]
+
+try:
+    init_db()
+    print("✅ DB Initialized Successfully")
+except Exception as e:
+    print("❌ DB Init Failed:", e)
+
+    for word in SCAM_KEYWORDS:
         if word in text_lower:
             risk_score += 10
             reasons.append(f"Suspicious keyword detected: {word}")
