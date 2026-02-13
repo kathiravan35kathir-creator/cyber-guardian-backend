@@ -1,11 +1,14 @@
 from flask import Flask, request, jsonify
 import re
 import requests
-import os
 from urllib.parse import urlparse
 from database import get_db_connection, init_db
 
 app = Flask(__name__)
+
+# ------------------- INIT DB -------------------
+# Render/Gunicorn start agumbodhe table create aagum
+init_db()
 
 # ------------------- BASIC KEYWORDS -------------------
 SCAM_KEYWORDS = [
@@ -31,27 +34,6 @@ FAKE_BRAND_WORDS = [
 ]
 
 # ------------------- DB FUNCTIONS -------------------
-def init_db():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS threats (
-        id SERIAL PRIMARY KEY,
-        type TEXT,
-        input_text TEXT,
-        status TEXT,
-        risk_score INT,
-        reasons TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-
 def save_threat(type_, input_text, status, risk_score, reasons):
     try:
         conn = get_db_connection()
@@ -124,7 +106,6 @@ def get_dashboard_stats():
         "caution": caution,
         "danger": danger
     }
-
 
 # ------------------- HELPER FUNCTIONS -------------------
 def extract_urls(text):
@@ -280,7 +261,6 @@ def analyze_text_common(text, analysis_type="message"):
         "urls_found": urls
     }
 
-
 # ------------------- ROUTES -------------------
 @app.route("/", methods=["GET"])
 def home():
@@ -293,7 +273,6 @@ def home():
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "success", "message": "Cyber Guardian Backend Running 🚀"})
-
 
 
 @app.route("/analyze/message", methods=["POST"])
@@ -373,6 +352,7 @@ def history_all():
     threats = get_recent_threats(limit=100)
     return jsonify({"history": threats})
 
+
 @app.route("/history", methods=["GET"])
 def history():
     threats = get_recent_threats(limit=50)
@@ -384,8 +364,6 @@ def guardians():
     return jsonify([])
 
 
-
 # ------------------- RUN -------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
-

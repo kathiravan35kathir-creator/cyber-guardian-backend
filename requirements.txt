@@ -9,4 +9,3 @@ gunicorn==22.0.0
 psycopg2-binary
 setuptools
 
-
