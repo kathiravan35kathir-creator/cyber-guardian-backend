@@ -3,7 +3,7 @@ import re
 import requests
 import os
 from urllib.parse import urlparse
-from database import get_db_connection
+from database import get_db_connection, init_db
 
 app = Flask(__name__)
 
@@ -387,5 +387,5 @@ def guardians():
 
 # ------------------- RUN -------------------
 if __name__ == "__main__":
-    init_db()
     app.run(host="0.0.0.0", port=10000)
+
