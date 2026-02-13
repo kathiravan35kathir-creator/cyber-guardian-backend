@@ -290,6 +290,12 @@ def home():
     })
 
 
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "success", "message": "Cyber Guardian Backend Running 🚀"})
+
+
+
 @app.route("/analyze/message", methods=["POST"])
 def analyze_message():
     data = request.get_json()
@@ -366,6 +372,17 @@ def dashboard_recent_api():
 def history_all():
     threats = get_recent_threats(limit=100)
     return jsonify({"history": threats})
+
+@app.route("/history", methods=["GET"])
+def history():
+    threats = get_recent_threats(limit=50)
+    return jsonify(threats)
+
+
+@app.route("/guardians", methods=["GET"])
+def guardians():
+    return jsonify([])
+
 
 
 # ------------------- RUN -------------------
