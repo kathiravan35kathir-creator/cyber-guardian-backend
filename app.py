@@ -11,14 +11,21 @@ app = Flask(__name__)
 init_db()
 
 # ------------------- BASIC KEYWORDS -------------------
-SCAM_KEYWORDS = [
-    "urgent", "immediate action", "account blocked", "verify now",
-    "bank", "otp", "password", "click here", "limited time",
-    "prize", "winner", "lottery", "processing fee",
-    "police case", "arrest", "legal action",
-    "loan approved", "refund", "gift card",
-    "suspended", "blocked", "update kyc", "aadhaar", "pan"
+HIGH_RISK_KEYWORDS = [
+    "otp", "password", "processing fee", "bank", "kyc",
+    "account blocked", "suspended", "blocked",
+    "police case", "arrest", "legal action"
 ]
+
+MEDIUM_RISK_KEYWORDS = [
+    "urgent", "immediate action", "verify now",
+    "refund", "loan approved", "gift card", "update"
+]
+
+LOW_RISK_KEYWORDS = [
+    "winner", "prize", "lottery", "limited time", "offer"
+]
+
 
 SHORTENER_DOMAINS = [
     "bit.ly", "tinyurl.com", "t.co", "goo.gl",
@@ -140,6 +147,25 @@ def analyze_link(url):
 
     domain = get_domain(url)
 
+    # ✅ ADD THESE (new checks)
+    if "@" in url:
+        reasons.append("URL contains '@' trick (redirect scam)")
+        risk_score += 30
+
+    if domain.count(".") >= 3:
+        reasons.append("Too many subdomains detected")
+        risk_score += 20
+
+    if len(url) > 80:
+        reasons.append("Very long URL detected")
+        risk_score += 15
+
+    suspicious_paths = ["login", "verify", "secure", "update", "bank", "kyc", "otp"]
+    for sp in suspicious_paths:
+        if f"/{sp}" in url.lower():
+            reasons.append(f"Suspicious URL path keyword detected: {sp}")
+            risk_score += 15
+            
     # Expand shortened URL
     if domain in SHORTENER_DOMAINS:
         expanded = expand_short_url(url)
@@ -212,10 +238,38 @@ def analyze_text_common(text, analysis_type="message"):
     lower_text = text.lower()
 
     # Scam keywords detection
-    for word in SCAM_KEYWORDS:
-        if word in lower_text:
-            reasons.append(f"Scam keyword detected: {word}")
-            risk_score += 10
+for word in HIGH_RISK_KEYWORDS:
+    if word in lower_text:
+        reasons.append(f"High risk keyword detected: {word}")
+        risk_score += 25
+
+for word in MEDIUM_RISK_KEYWORDS:
+    if word in lower_text:
+        reasons.append(f"Medium risk keyword detected: {word}")
+        risk_score += 15
+
+for word in LOW_RISK_KEYWORDS:
+    if word in lower_text:
+        reasons.append(f"Low risk keyword detected: {word}")
+        risk_score += 8
+        
+money_pattern = r"(\$|₹|rs\.?|inr)\s?\d+"
+if re.search(money_pattern, lower_text):
+    reasons.append("Money amount detected")
+    risk_score += 20
+
+upi_pattern = r"\b[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}\b"
+if re.search(upi_pattern, text):
+    reasons.append("UPI ID detected")
+    risk_score += 35
+
+if "prize" in lower_text and "processing fee" in lower_text:
+    reasons.append("Prize + processing fee scam combo detected")
+    risk_score += 40
+
+if "otp" in lower_text and ("bank" in lower_text or "account" in lower_text):
+    reasons.append("OTP request with banking context detected")
+    risk_score += 35
 
     # OTP detection
     otp_pattern = r"\b\d{4,6}\b"
@@ -242,12 +296,13 @@ def analyze_text_common(text, analysis_type="message"):
             risk_score += 15
 
     # Final status
-    if risk_score >= 60:
-        status = "Danger"
-    elif risk_score >= 30:
-        status = "Caution"
-    else:
-        status = "Safe"
+if risk_score >= 70:
+    status = "Danger"
+elif risk_score >= 40:
+    status = "Caution"
+else:
+    status = "Safe"
+
 
     if len(reasons) == 0:
         reasons.append("No scam patterns detected")
