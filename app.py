@@ -152,22 +152,22 @@ def analyze_link(url):
         reasons.append("URL contains '@' trick (redirect scam)")
         risk_score += 30
 
-    if domain.count(".") >= 3:
+if domain.count(".") >= 3:
         reasons.append("Too many subdomains detected")
         risk_score += 20
 
-    if len(url) > 80:
+if len(url) > 80:
         reasons.append("Very long URL detected")
         risk_score += 15
 
-    suspicious_paths = ["login", "verify", "secure", "update", "bank", "kyc", "otp"]
-    for sp in suspicious_paths:
+suspicious_paths = ["login", "verify", "secure", "update", "bank", "kyc", "otp"]
+for sp in suspicious_paths:
         if f"/{sp}" in url.lower():
             reasons.append(f"Suspicious URL path keyword detected: {sp}")
             risk_score += 15
             
     # Expand shortened URL
-    if domain in SHORTENER_DOMAINS:
+if domain in SHORTENER_DOMAINS:
         expanded = expand_short_url(url)
         reasons.append(f"Short URL detected, expanded to: {expanded}")
         url = expanded
@@ -175,51 +175,51 @@ def analyze_link(url):
         risk_score += 25
 
     # Suspicious TLD check
-    for tld in SUSPICIOUS_TLDS:
+for tld in SUSPICIOUS_TLDS:
         if domain.endswith(tld):
             reasons.append(f"Suspicious domain extension detected: {tld}")
             risk_score += 25
 
     # HTTP check
-    if url.startswith("http://"):
+if url.startswith("http://"):
         reasons.append("Insecure HTTP detected (not HTTPS)")
         risk_score += 15
 
     # Brand spoofing check
-    for brand in FAKE_BRAND_WORDS:
+for brand in FAKE_BRAND_WORDS:
         if brand in domain and not domain.endswith(".com") and not domain.endswith(".in"):
             reasons.append(f"Possible fake brand spoofing detected: {brand}")
             risk_score += 20
 
     # Keyword check inside URL
-    lower_url = url.lower()
-    for word in SCAM_KEYWORDS:
+lower_url = url.lower()
+for word in SCAM_KEYWORDS:
         if word in lower_url:
             reasons.append(f"Suspicious keyword found in URL: {word}")
             risk_score += 10
 
     # Too many hyphens
-    if "-" in domain and len(domain.split("-")) >= 3:
+if "-" in domain and len(domain.split("-")) >= 3:
         reasons.append("Domain has too many '-' which looks suspicious")
         risk_score += 15
 
     # Very long domain
-    if len(domain) > 25:
+if len(domain) > 25:
         reasons.append("Very long domain detected")
         risk_score += 10
 
     # IP address domain check
-    ip_pattern = r"^\d{1,3}(\.\d{1,3}){3}$"
-    if re.match(ip_pattern, domain):
+ip_pattern = r"^\d{1,3}(\.\d{1,3}){3}$"
+if re.match(ip_pattern, domain):
         reasons.append("URL uses direct IP address instead of domain")
         risk_score += 30
 
     # Final status
-    if risk_score >= 60:
+if risk_score >= 60:
         status = "Danger"
-    elif risk_score >= 30:
+elif risk_score >= 30:
         status = "Caution"
-    else:
+else:
         status = "Safe"
 
     return {
