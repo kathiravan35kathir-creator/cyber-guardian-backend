@@ -236,40 +236,41 @@ def analyze_text_common(text, analysis_type="message"):
     reasons = []
     risk_score = 0
     lower_text = text.lower()
+    urls = []
 
     # Scam keywords detection
-for word in HIGH_RISK_KEYWORDS:
-    if word in lower_text:
-        reasons.append(f"High risk keyword detected: {word}")
-        risk_score += 25
+    for word in HIGH_RISK_KEYWORDS:
+        if word in lower_text:
+            reasons.append(f"High risk keyword detected: {word}")
+            risk_score += 25
 
-for word in MEDIUM_RISK_KEYWORDS:
-    if word in lower_text:
-        reasons.append(f"Medium risk keyword detected: {word}")
-        risk_score += 15
+    for word in MEDIUM_RISK_KEYWORDS:
+        if word in lower_text:
+            reasons.append(f"Medium risk keyword detected: {word}")
+            risk_score += 15
 
-for word in LOW_RISK_KEYWORDS:
-    if word in lower_text:
-        reasons.append(f"Low risk keyword detected: {word}")
-        risk_score += 8
-        
-money_pattern = r"(\$|₹|rs\.?|inr)\s?\d+"
-if re.search(money_pattern, lower_text):
-    reasons.append("Money amount detected")
-    risk_score += 20
+    for word in LOW_RISK_KEYWORDS:
+        if word in lower_text:
+            reasons.append(f"Low risk keyword detected: {word}")
+            risk_score += 8
 
-upi_pattern = r"\b[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}\b"
-if re.search(upi_pattern, text):
-    reasons.append("UPI ID detected")
-    risk_score += 35
+    money_pattern = r"(\$|₹|rs\.?|inr)\s?\d+"
+    if re.search(money_pattern, lower_text):
+        reasons.append("Money amount detected")
+        risk_score += 20
 
-if "prize" in lower_text and "processing fee" in lower_text:
-    reasons.append("Prize + processing fee scam combo detected")
-    risk_score += 40
+    upi_pattern = r"\b[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}\b"
+    if re.search(upi_pattern, text):
+        reasons.append("UPI ID detected")
+        risk_score += 35
 
-if "otp" in lower_text and ("bank" in lower_text or "account" in lower_text):
-    reasons.append("OTP request with banking context detected")
-    risk_score += 35
+    if "prize" in lower_text and "processing fee" in lower_text:
+        reasons.append("Prize + processing fee scam combo detected")
+        risk_score += 40
+
+    if "otp" in lower_text and ("bank" in lower_text or "account" in lower_text):
+        reasons.append("OTP request with banking context detected")
+        risk_score += 35
 
     # OTP detection
     otp_pattern = r"\b\d{4,6}\b"
@@ -296,13 +297,12 @@ if "otp" in lower_text and ("bank" in lower_text or "account" in lower_text):
             risk_score += 15
 
     # Final status
-if risk_score >= 70:
-    status = "Danger"
-elif risk_score >= 40:
-    status = "Caution"
-else:
-    status = "Safe"
-
+    if risk_score >= 70:
+        status = "Danger"
+    elif risk_score >= 40:
+        status = "Caution"
+    else:
+        status = "Safe"
 
     if len(reasons) == 0:
         reasons.append("No scam patterns detected")
