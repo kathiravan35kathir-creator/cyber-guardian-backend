@@ -7,7 +7,6 @@ from database import get_db_connection, init_db
 app = Flask(__name__)
 
 # ------------------- INIT DB -------------------
-# Render/Gunicorn start agumbodhe table create aagum
 init_db()
 
 # ------------------- BASIC KEYWORDS -------------------
@@ -25,7 +24,6 @@ MEDIUM_RISK_KEYWORDS = [
 LOW_RISK_KEYWORDS = [
     "winner", "prize", "lottery", "limited time", "offer"
 ]
-
 
 SHORTENER_DOMAINS = [
     "bit.ly", "tinyurl.com", "t.co", "goo.gl",
@@ -114,6 +112,7 @@ def get_dashboard_stats():
         "danger": danger
     }
 
+
 # ------------------- HELPER FUNCTIONS -------------------
 def extract_urls(text):
     url_pattern = r"(https?://[^\s]+|www\.[^\s]+)"
@@ -141,33 +140,37 @@ def get_domain(url):
         return ""
 
 
+# ------------------- LINK ANALYSIS -------------------
 def analyze_link(url):
     reasons = []
     risk_score = 0
 
     domain = get_domain(url)
 
-    # ✅ ADD THESE (new checks)
+    # URL contains @ trick
     if "@" in url:
         reasons.append("URL contains '@' trick (redirect scam)")
         risk_score += 30
 
-if domain.count(".") >= 3:
+    # Too many subdomains
+    if domain.count(".") >= 3:
         reasons.append("Too many subdomains detected")
         risk_score += 20
 
-if len(url) > 80:
+    # Very long URL
+    if len(url) > 80:
         reasons.append("Very long URL detected")
         risk_score += 15
 
-suspicious_paths = ["login", "verify", "secure", "update", "bank", "kyc", "otp"]
-for sp in suspicious_paths:
+    # Suspicious URL paths
+    suspicious_paths = ["login", "verify", "secure", "update", "bank", "kyc", "otp"]
+    for sp in suspicious_paths:
         if f"/{sp}" in url.lower():
             reasons.append(f"Suspicious URL path keyword detected: {sp}")
             risk_score += 15
-            
+
     # Expand shortened URL
-if domain in SHORTENER_DOMAINS:
+    if domain in SHORTENER_DOMAINS:
         expanded = expand_short_url(url)
         reasons.append(f"Short URL detected, expanded to: {expanded}")
         url = expanded
@@ -175,51 +178,51 @@ if domain in SHORTENER_DOMAINS:
         risk_score += 25
 
     # Suspicious TLD check
-for tld in SUSPICIOUS_TLDS:
+    for tld in SUSPICIOUS_TLDS:
         if domain.endswith(tld):
             reasons.append(f"Suspicious domain extension detected: {tld}")
             risk_score += 25
 
     # HTTP check
-if url.startswith("http://"):
+    if url.startswith("http://"):
         reasons.append("Insecure HTTP detected (not HTTPS)")
         risk_score += 15
 
     # Brand spoofing check
-for brand in FAKE_BRAND_WORDS:
+    for brand in FAKE_BRAND_WORDS:
         if brand in domain and not domain.endswith(".com") and not domain.endswith(".in"):
             reasons.append(f"Possible fake brand spoofing detected: {brand}")
             risk_score += 20
 
     # Keyword check inside URL
-lower_url = url.lower()
-for word in SCAM_KEYWORDS:
+    lower_url = url.lower()
+    for word in HIGH_RISK_KEYWORDS:
         if word in lower_url:
             reasons.append(f"Suspicious keyword found in URL: {word}")
             risk_score += 10
 
     # Too many hyphens
-if "-" in domain and len(domain.split("-")) >= 3:
+    if "-" in domain and len(domain.split("-")) >= 3:
         reasons.append("Domain has too many '-' which looks suspicious")
         risk_score += 15
 
     # Very long domain
-if len(domain) > 25:
+    if len(domain) > 25:
         reasons.append("Very long domain detected")
         risk_score += 10
 
     # IP address domain check
-ip_pattern = r"^\d{1,3}(\.\d{1,3}){3}$"
-if re.match(ip_pattern, domain):
+    ip_pattern = r"^\d{1,3}(\.\d{1,3}){3}$"
+    if re.match(ip_pattern, domain):
         reasons.append("URL uses direct IP address instead of domain")
         risk_score += 30
 
     # Final status
-if risk_score >= 60:
+    if risk_score >= 60:
         status = "Danger"
-elif risk_score >= 30:
+    elif risk_score >= 30:
         status = "Caution"
-else:
+    else:
         status = "Safe"
 
     return {
@@ -232,47 +235,53 @@ else:
     }
 
 
+# ------------------- MESSAGE ANALYSIS -------------------
 def analyze_text_common(text, analysis_type="message"):
     reasons = []
     risk_score = 0
     lower_text = text.lower()
-    urls = []
 
-    # Scam keywords detection
+    # High risk
     for word in HIGH_RISK_KEYWORDS:
         if word in lower_text:
             reasons.append(f"High risk keyword detected: {word}")
             risk_score += 25
 
+    # Medium risk
     for word in MEDIUM_RISK_KEYWORDS:
         if word in lower_text:
             reasons.append(f"Medium risk keyword detected: {word}")
             risk_score += 15
 
+    # Low risk
     for word in LOW_RISK_KEYWORDS:
         if word in lower_text:
             reasons.append(f"Low risk keyword detected: {word}")
             risk_score += 8
 
+    # Money detection
     money_pattern = r"(\$|₹|rs\.?|inr)\s?\d+"
     if re.search(money_pattern, lower_text):
         reasons.append("Money amount detected")
         risk_score += 20
 
+    # UPI detection
     upi_pattern = r"\b[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}\b"
     if re.search(upi_pattern, text):
         reasons.append("UPI ID detected")
         risk_score += 35
 
+    # Prize + processing fee combo
     if "prize" in lower_text and "processing fee" in lower_text:
         reasons.append("Prize + processing fee scam combo detected")
         risk_score += 40
 
+    # OTP + banking context
     if "otp" in lower_text and ("bank" in lower_text or "account" in lower_text):
         reasons.append("OTP request with banking context detected")
         risk_score += 35
 
-    # OTP detection
+    # OTP-like numbers
     otp_pattern = r"\b\d{4,6}\b"
     if re.search(otp_pattern, lower_text):
         reasons.append("OTP-like number detected")
@@ -316,6 +325,7 @@ def analyze_text_common(text, analysis_type="message"):
         "urls_found": urls
     }
 
+
 # ------------------- ROUTES -------------------
 @app.route("/", methods=["GET"])
 def home():
@@ -358,34 +368,6 @@ def analyze_link_api():
 
     result = analyze_link(url)
     save_threat("link", url, result["status"], result["risk_score"], result["reasons"])
-
-    return jsonify(result)
-
-
-@app.route("/analyze/call", methods=["POST"])
-def analyze_call():
-    data = request.get_json()
-    call_info = data.get("call_info", "").strip()
-
-    if not call_info:
-        return jsonify({"status": "Error", "message": "Call info is empty"}), 400
-
-    result = analyze_text_common(call_info, "call")
-    save_threat("call", call_info, result["status"], result["risk_score"], result["reasons"])
-
-    return jsonify(result)
-
-
-@app.route("/analyze/voice", methods=["POST"])
-def analyze_voice():
-    data = request.get_json()
-    voice_text = data.get("voice_text", "").strip()
-
-    if not voice_text:
-        return jsonify({"status": "Error", "message": "Voice text is empty"}), 400
-
-    result = analyze_text_common(voice_text, "voice")
-    save_threat("voice", voice_text, result["status"], result["risk_score"], result["reasons"])
 
     return jsonify(result)
 
