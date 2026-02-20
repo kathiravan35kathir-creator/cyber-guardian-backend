@@ -242,6 +242,12 @@ def analyze_text_common(text, analysis_type="message"):
     reasons = []
     risk_score = 0
 
+    translated_text = text
+    detected_lang = detect_language(text)
+    lower_text = translated_text.lower()
+
+    sentiment, polarity = sentiment_score(translated_text)
+
     if sentiment == "negative":
         reasons.append("NLP detected negative/fear sentiment in message")
         risk_score += 15
@@ -280,6 +286,7 @@ def analyze_text_common(text, analysis_type="message"):
         "type": analysis_type,
         "input": text,
         "detected_language": detected_lang,
+        "translated_text": translated_text,
         "status": status,
         "risk_score": risk_score,
         "reasons": reasons,
@@ -413,6 +420,7 @@ def analyze_message():
         "final_risk_score": final_risk_score,
         "behavior_score": behavior_score,
         "detected_language": msg_result["detected_language"],
+        "translated_text": msg_result["translated_text"],
         "reasons": combined_reasons
     })
 
