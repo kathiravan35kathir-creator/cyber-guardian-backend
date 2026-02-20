@@ -517,6 +517,10 @@ def dashboard_stats_api():
     stats = get_dashboard_stats(user_id)
     return jsonify(stats)
 
+@app.route("/ping")
+def ping():
+    return "PONG"
+
 
 if __name__ == "__main__":
     import os
