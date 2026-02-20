@@ -435,7 +435,7 @@ def analyze_message():
         "reasons": combined_reasons
     })
 
-  @app.route("/analyze-link", methods=["POST"])
+@app.route("/analyze-link", methods=["POST"])
 def analyze_link_api():
 
     user_id = get_user_id_from_token()
@@ -519,4 +519,6 @@ def dashboard_stats_api():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    import os
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
