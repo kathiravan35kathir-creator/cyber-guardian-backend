@@ -904,7 +904,26 @@ class _ThreatHistoryScreenState extends State<ThreatHistoryScreen> {
     try {
       final user = supabase.auth.currentUser;
       if (user == null) return;
+      // Try fetching history from backend first
+      try {
+        final resp = await http.get(Uri.parse("$backendBaseUrl/threat-history"));
+        if (resp.statusCode == 200) {
+          final decoded = jsonDecode(resp.body);
+          // backend returns { "history": [ ... ] }
+          final hs = decoded["history"] ?? [];
+          setState(() {
+            history = hs;
+          });
+          setState(() {
+            loading = false;
+          });
+          return;
+        }
+      } catch (e) {
+        debugPrint("Backend history fetch failed, falling back to Supabase: $e");
+      }
 
+      // Fallback: fetch directly from Supabase
       final data = await supabase
           .from("threat_history")
           .select()

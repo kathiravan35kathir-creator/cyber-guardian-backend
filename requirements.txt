@@ -8,4 +8,9 @@ tldextract
 gunicorn==22.0.0
 psycopg2-binary
 setuptools
+langdetect
+googletrans==4.0.0rc1
+textblob
+nltk
+
 
