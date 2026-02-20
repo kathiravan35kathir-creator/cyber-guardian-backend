@@ -3,7 +3,6 @@ import re
 import requests
 from urllib.parse import urlparse
 from langdetect import detect
-from googletrans import Translator
 from dotenv import load_dotenv
 from textblob import TextBlob
 from supabase_client import supabase
@@ -11,7 +10,6 @@ from supabase_client import supabase
 load_dotenv()
 
 app = Flask(__name__)
-translator = Translator()
 
 # ------------------- BASIC KEYWORDS -------------------
 HIGH_RISK_KEYWORDS = [
@@ -141,17 +139,7 @@ def sentiment_score(text):
         return "unknown", 0
 
 
-def translate_to_english(text):
-    try:
-        lang = detect_language(text)
 
-        if lang == "en":
-            return text, lang
-
-        translated = translator.translate(text, dest="en")
-        return translated.text, lang
-    except:
-        return text, "unknown"
 
 
 def extract_urls(text):
@@ -254,11 +242,6 @@ def analyze_text_common(text, analysis_type="message"):
     reasons = []
     risk_score = 0
 
-    translated_text, detected_lang = translate_to_english(text)
-    lower_text = translated_text.lower()
-
-    sentiment, polarity = sentiment_score(translated_text)
-
     if sentiment == "negative":
         reasons.append("NLP detected negative/fear sentiment in message")
         risk_score += 15
@@ -297,7 +280,6 @@ def analyze_text_common(text, analysis_type="message"):
         "type": analysis_type,
         "input": text,
         "detected_language": detected_lang,
-        "translated_text": translated_text,
         "status": status,
         "risk_score": risk_score,
         "reasons": reasons,
@@ -431,7 +413,6 @@ def analyze_message():
         "final_risk_score": final_risk_score,
         "behavior_score": behavior_score,
         "detected_language": msg_result["detected_language"],
-        "translated_text": msg_result["translated_text"],
         "reasons": combined_reasons
     })
 
